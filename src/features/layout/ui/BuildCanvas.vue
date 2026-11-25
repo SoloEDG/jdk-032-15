@@ -13,8 +13,18 @@ const emit = defineEmits<{
 const svg = ref<SVGSVGElement | null>(null)
 const view = { width: 1040, height: 510, margin: 35 }
 const fallen = computed(() => new Set(props.run?.events.filter(event => event.kind === 'fall').map(event => event.pieceId) ?? []))
+const reachedTriggers = computed(() => new Set(props.run?.reachedTriggerIds ?? []))
 const failed = computed(() => props.run?.interruptedPieceId ?? null)
 let dragging: string | null = null
+
+function routingOf(pieceId: string) {
+  return props.run?.events.find(event => event.pieceId === pieceId && event.routing)?.routing ?? null
+}
+function linkState(linkId: string, fromId: string): 'taken' | 'untaken' | '' {
+  const routing = routingOf(fromId)
+  if (!routing || !routing.twoSided) return ''
+  return routing.routedConnectionIds.includes(linkId) ? 'taken' : 'untaken'
+}
 
 function worldPoint(event: PointerEvent) {
   if (!svg.value) return { x: 0, y: 0 }
@@ -51,6 +61,9 @@ function pxX(x: number) { return view.margin + x / props.document.scene.width * 
 function pxY(y: number) { return view.margin + y / props.document.scene.height * (view.height - view.margin * 2) }
 function pieceColor(piece: Piece) {
   if (piece.id === failed.value) return '#e88b69'
+  if (piece.kind === 'trigger' && props.run) {
+    return reachedTriggers.value.has(piece.id) ? '#89c5a5' : '#8a6a5c'
+  }
   if (fallen.value.has(piece.id)) return '#89c5a5'
   if (piece.kind === 'ramp') return '#8ca6a0'
   if (piece.kind === 'splitter') return '#e6bd68'
@@ -89,7 +102,8 @@ function eventTime(pieceId: string) {
       <rect :x="view.margin" :y="view.margin" :width="view.width-view.margin*2" :height="view.height-view.margin*2" rx="7" fill="url(#draft-fine)" pointer-events="none" />
       <path v-if="document.scene.showGrid" :d="`M ${view.margin} ${view.height/2} H ${view.width-view.margin} M ${view.width/2} ${view.margin} V ${view.height-view.margin}`" class="center-guide" pointer-events="none" />
 
-      <g v-for="connection in document.connections.filter(link => link.enabled)" :key="connection.id" class="mechanism-link" pointer-events="none">
+      <g v-for="connection in document.connections.filter(link => link.enabled)" :key="connection.id"
+        class="mechanism-link" :class="linkState(connection.id, connection.from)" pointer-events="none">
         <path :d="`M ${pxX(document.pieces.find(piece => piece.id === connection.from)?.x ?? 0)} ${pxY(document.pieces.find(piece => piece.id === connection.from)?.y ?? 0)} Q ${(pxX(document.pieces.find(piece => piece.id === connection.from)?.x ?? 0)+pxX(document.pieces.find(piece => piece.id === connection.to)?.x ?? 0))/2} ${(pxY(document.pieces.find(piece => piece.id === connection.from)?.y ?? 0)+pxY(document.pieces.find(piece => piece.id === connection.to)?.y ?? 0))/2-36} ${pxX(document.pieces.find(piece => piece.id === connection.to)?.x ?? 0)} ${pxY(document.pieces.find(piece => piece.id === connection.to)?.y ?? 0)}`" />
         <circle :cx="pxX(document.pieces.find(piece => piece.id === connection.from)?.x ?? 0)" :cy="pxY(document.pieces.find(piece => piece.id === connection.from)?.y ?? 0)" r="3" />
       </g>
@@ -109,6 +123,10 @@ function eventTime(pieceId: string) {
         <circle v-if="piece.id === failed" cy="-34" r="7" class="failure-marker" />
         <text y="32" text-anchor="middle" class="piece-label">{{ piece.label }}</text>
         <text v-if="eventTime(piece.id)" y="44" text-anchor="middle" class="piece-time">{{ eventTime(piece.id) }}s</text>
+        <text v-if="routingOf(piece.id)" y="56" text-anchor="middle" class="piece-route-tag"
+          :data-side="routingOf(piece.id)?.routeSide">
+          {{ routingOf(piece.id)?.routeSide === 'left' ? '← 左路' : '右路 →' }} {{ routingOf(piece.id)?.entryAngle.toFixed(0) }}°
+        </text>
         <rect v-if="selectedId === piece.id || focusPieceId === piece.id" x="-18" y="-28" width="36" height="55" rx="8" class="selection-ring" />
       </g>
 

@@ -1,15 +1,50 @@
 <script setup lang="ts">
-import { AlertTriangle, CheckCircle2, CircleStop, FastForward, Pause, Play, RotateCcw, SkipBack } from '@lucide/vue'
-import type { SimulationEvent, SimulationRun } from '@/shared/document'
+import { computed, ref, watch } from 'vue'
+import { AlertTriangle, CheckCircle2, CircleStop, FastForward, GitBranch, Pause, Play, RotateCcw, SkipBack, Zap } from '@lucide/vue'
+import type { RoutingBasis, SimulationEvent, SimulationRun } from '@/shared/document'
 import { formatSeconds } from '@/shared/time'
 
-defineProps<{
+const props = defineProps<{
   run: SimulationRun | null; events: SimulationEvent[]; time: number; playing: boolean
   currentEvent: SimulationEvent | null; stale: boolean
 }>()
 const emit = defineEmits<{ toggle: []; seek: [number]; restart: []; event: [string] }>()
 const iconFor = (kind: SimulationEvent['kind']) => kind === 'interrupted' ? AlertTriangle
   : kind === 'mechanism' ? FastForward : CheckCircle2
+
+const pinnedEventId = ref<string | null>(null)
+watch(() => props.run, () => { pinnedEventId.value = null })
+// When playback resumes (button or Space), let the card follow the scrub position.
+watch(() => props.playing, (playing) => { if (playing) pinnedEventId.value = null })
+
+function selectEvent(event: SimulationEvent) {
+  pinnedEventId.value = event.routing ? event.id : null
+  emit('event', event.id)
+}
+function seek(value: number) {
+  pinnedEventId.value = null
+  emit('seek', value)
+}
+function restart() {
+  pinnedEventId.value = null
+  emit('restart')
+}
+
+/**
+ * The basis card reads ONLY the routing payload archived on the event.
+ * It never consults the splitter's current threshold/side properties, so
+ * editing settings after the run cannot reinterpret an old event.
+ */
+const basis = computed<RoutingBasis | null>(() => {
+  if (pinnedEventId.value) {
+    const pinned = props.events.find(event => event.id === pinnedEventId.value)
+    if (pinned?.routing) return pinned.routing
+  }
+  return props.currentEvent?.routing ?? null
+})
+function comparator(basis: RoutingBasis) {
+  return basis.entryAngle < basis.threshold ? '<' : '≥'
+}
 </script>
 
 <template>
@@ -24,25 +59,66 @@ const iconFor = (kind: SimulationEvent['kind']) => kind === 'interrupted' ? Aler
         <div><strong>{{ run.status === 'interrupted' ? '找到中断点' : run.status === 'complete' ? '连锁已完成' : '场景暂无元件' }}</strong>
           <small>{{ run.interruptionReason ?? '所有触发事件均已记录' }}</small></div>
       </div>
+
+      <div v-if="run.endpoints?.length" class="endpoint-list" aria-label="终点可达状态">
+        <span v-for="endpoint in run.endpoints" :key="endpoint.pieceId" class="endpoint-chip"
+          :class="endpoint.reached ? 'reached' : 'missed'">
+          <Zap :size="11" />{{ endpoint.label }}<i>{{ endpoint.reached ? '可达' : '不可达' }}</i>
+        </span>
+      </div>
+
       <div class="replay-controls">
-        <button class="replay-icon" aria-label="回到开头" @click="emit('restart')"><SkipBack :size="15" /></button>
+        <button class="replay-icon" aria-label="回到开头" @click="restart"><SkipBack :size="15" /></button>
         <button class="replay-play" :aria-label="playing ? '暂停回放' : '播放回放'" @click="emit('toggle')">
           <Pause v-if="playing" :size="16" fill="currentColor" /><Play v-else :size="16" fill="currentColor" />
         </button>
         <span class="replay-clock mono">{{ formatSeconds(time) }}</span>
         <input aria-label="回放进度" class="replay-range" type="range" min="0" :max="run.duration || 0.01" step="0.01" :value="time"
-          @input="emit('seek', Number(($event.target as HTMLInputElement).value))" />
+          @input="seek(Number(($event.target as HTMLInputElement).value))" />
         <span class="replay-clock mono">{{ formatSeconds(run.duration) }}</span>
       </div>
+
+      <div v-if="basis" class="routing-card" :data-impact="basis.impact" aria-live="polite">
+        <div class="routing-card-head">
+          <GitBranch :size="13" /><strong>分路依据</strong>
+          <span class="routing-archived">运行时存档 · R{{ run.revision }}</span>
+        </div>
+        <div class="routing-metrics">
+          <div class="routing-angle">
+            <strong>{{ basis.entryAngle.toFixed(1) }}°</strong><span>进入角</span>
+          </div>
+          <div class="routing-compare">
+            <span :class="basis.impact">{{ comparator(basis) }}</span>
+            <span class="routing-threshold">{{ basis.threshold.toFixed(0) }}°</span>
+            <small>分界</small>
+          </div>
+          <div class="routing-result">
+            <span class="routing-impact-tag" :class="basis.impact">{{ basis.impact === 'frontal' ? '正面' : '擦边' }}</span>
+            <span class="routing-side-tag">{{ basis.routeSide === 'left' ? '左' : '右' }}支路</span>
+          </div>
+        </div>
+        <p class="routing-target">
+          导向：{{ basis.chosenTargetLabel ?? (basis.routeSide === 'left' ? '左侧支路' : '右侧支路') }}
+          <template v-if="!basis.twoSided">（未形成左右双侧接线，按原有连线全部继续）</template>
+        </p>
+        <p v-if="basis.latched || basis.touchCount > 1" class="routing-latch latched">
+          同一碰撞共 {{ basis.touchCount }} 次触碰：首次 {{ basis.firstEntryAngle.toFixed(1) }}° 定路，
+          后续回弹 / 连续触碰为 {{ basis.latestEntryAngle.toFixed(1) }}°，已保持{{ basis.routeSide === 'left' ? '左' : '右' }}侧不切换。
+        </p>
+        <p v-else class="routing-latch">首次触碰 {{ basis.firstEntryAngle.toFixed(1) }}° 即锁定该碰撞路线。</p>
+        <p class="routing-source-note">角度与阈值取自本次模拟快照，调整当前阈值不会重释此事件。</p>
+      </div>
+
       <div class="event-list-heading"><span>事件轨迹</span><span>{{ events.length }} EVENTS</span></div>
       <ol class="event-list">
         <li v-for="event in events" :key="event.id">
-          <button class="event-row" :class="{ current: currentEvent?.id === event.id, interrupted: event.kind === 'interrupted' }"
-            :aria-current="currentEvent?.id === event.id ? 'step' : undefined" @click="emit('event', event.id)">
+          <button class="event-row" :class="{ current: currentEvent?.id === event.id || pinnedEventId === event.id, interrupted: event.kind === 'interrupted' }"
+            :aria-current="currentEvent?.id === event.id ? 'step' : undefined" @click="selectEvent(event)">
             <span class="event-time mono">{{ formatSeconds(event.time) }}</span>
             <span class="event-icon"><component :is="iconFor(event.kind)" :size="14" /></span>
             <span class="event-copy"><strong>{{ run.events.find(item => item.id === event.id)?.pieceId === run.startPieceId ? '启动点' : event.detail.split(' · ')[0] }}</strong><small>{{ event.detail.split(' · ')[1] ?? event.pieceId }}</small></span>
             <span v-if="event.kind === 'interrupted'" class="event-flag">中断</span>
+            <span v-else-if="event.routing" class="event-flag route">分路</span>
           </button>
         </li>
       </ol>
@@ -51,11 +127,11 @@ const iconFor = (kind: SimulationEvent['kind']) => kind === 'interrupted' ? Aler
         <div><strong>中断位置</strong><p>{{ run.events.find(event => event.kind === 'interrupted')?.pieceId }} 未触及下一件元件。返回场景调整间距或方向，再次模拟。</p></div>
         <button :aria-label="'定位到 ' + run.interruptedPieceId" @click="emit('event', run.events.find(event => event.kind === 'interrupted')?.id ?? '')">定位</button>
       </div>
-      <div v-if="stale" class="stale-note"><RotateCcw :size="13" /> 当前布局已改变，这份结果仍对应运行时保存的场景。</div>
+      <div v-if="stale" class="stale-note"><RotateCcw :size="13" /> 当前布局已改变，这份结果仍对应运行时保存的场景与分路依据。</div>
     </template>
     <div v-else class="replay-empty">
       <div class="empty-orbit"><i></i><i></i><i></i><span></span></div>
-      <strong>等待第一次模拟</strong><p>点击「运行模拟」，倒下顺序与中断位置会显示在这里。</p>
+      <strong>等待第一次模拟</strong><p>点击「运行模拟」，倒下顺序、分路依据与中断位置会显示在这里。</p>
     </div>
   </section>
 </template>

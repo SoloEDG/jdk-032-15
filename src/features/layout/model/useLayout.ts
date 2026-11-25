@@ -23,6 +23,7 @@ export function useLayout(document: Ref<DominoDocument>, changed: () => void) {
       label: names[kind], width: kind === 'ramp' ? 1.7 : kind === 'splitter' ? 0.72 : 0.42,
       height: kind === 'ramp' ? 0.48 : kind === 'trigger' ? 0.8 : 1.6,
       fallThreshold: 0.8, friction: 0.55,
+      ...(kind === 'splitter' ? { splitAngle: 45, frontalSide: 'left' as const } : {}),
     }
     document.value = { ...document.value, pieces: [...document.value.pieces, piece] }
     selectedId.value = id
@@ -48,7 +49,7 @@ export function useLayout(document: Ref<DominoDocument>, changed: () => void) {
     changed()
   }
 
-  function update(id: string, patch: Partial<Pick<Piece, 'label' | 'height' | 'width' | 'fallThreshold' | 'friction'>>) {
+  function update(id: string, patch: Partial<Pick<Piece, 'label' | 'height' | 'width' | 'fallThreshold' | 'friction' | 'splitAngle' | 'frontalSide'>>) {
     document.value = {
       ...document.value,
       pieces: document.value.pieces.map(piece => piece.id === id ? { ...piece, ...patch } : piece),

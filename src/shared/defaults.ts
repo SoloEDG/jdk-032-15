@@ -14,7 +14,7 @@ export function createDefaultDocument(): DominoDocument {
     domino('d5', 8.4, 4.2, 0, '06'),
     { ...domino('r1', 10.2, 4.2, 0, '上坡'), kind: 'ramp', width: 1.7, height: 0.45 },
     domino('d6', 12.1, 3.55, -20, '08'),
-    { ...domino('s1', 13.7, 3.15, 20, '分岔'), kind: 'splitter', width: 0.75 },
+    { ...domino('s1', 13.7, 3.15, 20, '分岔'), kind: 'splitter', width: 0.75, splitAngle: 45, frontalSide: 'left' },
     domino('d7', 15.2, 2.3, 0, '10'),
     domino('d8', 16.8, 2.3, 0, '11'),
     domino('d9', 15.2, 4.05, 0, '12'),

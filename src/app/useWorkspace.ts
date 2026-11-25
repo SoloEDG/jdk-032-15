@@ -6,6 +6,7 @@ import { useMechanisms } from '@/features/mechanisms'
 import { useScene, clampToScene } from '@/features/scene'
 import { useSimulation } from '@/features/simulation'
 import { useReview } from '@/features/replay'
+import { normalizeDocument } from '@/shared/normalize'
 
 const storageKey = 'chainline-jdk032-project-v1'
 
@@ -15,7 +16,7 @@ function loadProject() {
     if (!saved) return createDefaultDocument()
     const parsed = JSON.parse(saved) as DominoDocument
     if (!Array.isArray(parsed.pieces) || !Array.isArray(parsed.connections) || !parsed.scene) return createDefaultDocument()
-    return parsed
+    return normalizeDocument(parsed)
   } catch {
     return createDefaultDocument()
   }

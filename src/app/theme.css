@@ -250,6 +250,54 @@ kbd { padding: 2px 5px; border: 1px solid #536357; border-radius: 3px; backgroun
 @keyframes pulse { to { opacity: .35; } }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ---- splitter angle routing ---- */
+.splitter-inspector { margin: 12px 0 4px; padding: 10px; border: 1px solid #4c4a33; border-radius: 5px; background: #28332a; }
+.splitter-inspector-title { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; color: var(--gold); font-size: 10px; font-weight: 600; }
+.splitter-inspector .field-label > span { color: var(--ink); }
+.side-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+.side-switch button { min-height: 30px; padding: 0 4px; border: 1px solid var(--rule); border-radius: 4px; background: var(--field); color: var(--muted); font-size: 10px; }
+.side-switch button:hover { border-color: var(--gold); color: var(--ink); }
+.side-switch button.active { border-color: var(--gold); background: #3b3824; color: var(--gold); font-weight: 600; }
+.routing-rule-note { margin-top: 9px; color: var(--quiet); font-size: 9px; line-height: 1.6; }
+.connection-side { flex: none; padding: 1px 7px; border: 1px solid #5c5433; border-radius: 9px; color: var(--gold); font: 8px var(--mono); white-space: nowrap; }
+.mechanism-link.taken path { stroke: var(--mint); stroke-width: 1.9; opacity: .95; }
+.mechanism-link.taken circle { fill: var(--mint); }
+.mechanism-link.untaken { opacity: .16; }
+.piece-route-tag { fill: var(--mint); font: 8px var(--mono); pointer-events: none; }
+
+/* ---- replay endpoints + routing basis ---- */
+.endpoint-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.endpoint-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid var(--rule); border-radius: 11px; color: var(--muted); font-size: 9px; }
+.endpoint-chip i { padding-left: 6px; border-left: 1px solid var(--rule); font: 8px var(--mono); font-style: normal; }
+.endpoint-chip.reached { border-color: #4c6b58; background: #24352c; color: var(--mint); }
+.endpoint-chip.reached i { color: var(--mint); }
+.endpoint-chip.missed { border-color: #6e4c40; background: #382a25; color: var(--terracotta); }
+.endpoint-chip.missed i { color: var(--terracotta); }
+.routing-card { margin-top: 10px; padding: 10px; border: 1px solid #5c5536; border-left: 2px solid var(--gold); border-radius: 5px; background: #2b3327; }
+.routing-card[data-impact="grazing"] { border-color: #35506b; border-left-color: #9cc4e4; }
+.routing-card-head { display: flex; align-items: center; gap: 6px; color: var(--gold); font-size: 10px; }
+.routing-card[data-impact="grazing"] .routing-card-head { color: #9cc4e4; }
+.routing-archived { margin-left: auto; color: var(--quiet); font: 8px var(--mono); }
+.routing-metrics { display: flex; align-items: center; gap: 12px; margin: 9px 0 7px; }
+.routing-angle strong { font: 600 21px var(--mono); color: var(--ink); }
+.routing-angle span { display: block; margin-top: 1px; color: var(--quiet); font-size: 8px; text-align: center; }
+.routing-compare { display: grid; grid-template-columns: auto auto; column-gap: 5px; align-items: baseline; }
+.routing-compare > span:first-child { grid-row: 1 / span 2; align-self: center; font-size: 17px; }
+.routing-compare > span.frontal { color: var(--gold); }
+.routing-compare > span.grazing { color: #9cc4e4; }
+.routing-threshold { color: var(--gold); font: 600 14px var(--mono); }
+.routing-compare small { color: var(--quiet); font-size: 8px; }
+.routing-result { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; margin-left: auto; }
+.routing-impact-tag, .routing-side-tag { padding: 2px 9px; border-radius: 10px; font-size: 9px; font-weight: 600; white-space: nowrap; }
+.routing-impact-tag.frontal { border: 1px solid #6b5a2e; background: #4a3f24; color: var(--gold); }
+.routing-impact-tag.grazing { border: 1px solid #35506b; background: #27384a; color: #9cc4e4; }
+.routing-side-tag { border: 1px solid #41604e; background: #2c4436; color: var(--mint); }
+.routing-target { color: var(--muted); font-size: 9px; line-height: 1.5; }
+.routing-latch { margin-top: 5px; color: var(--quiet); font-size: 9px; line-height: 1.55; }
+.routing-latch.latched { color: var(--gold); }
+.routing-source-note { margin-top: 6px; color: #66756b; font-size: 8px; line-height: 1.45; }
+.event-flag.route { color: var(--gold); }
+
 @media (max-width: 1250px) {
   .workspace-grid { grid-template-columns: 195px minmax(440px,1fr) 275px; gap: 15px; padding-inline: 16px; }
   .topbar { padding-inline: 16px; gap: 15px; }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Cable, CirclePlus, GitBranch, X } from '@lucide/vue'
-import type { DominoDocument } from '@/shared/document'
-import { availableTargets } from '../lib/connections'
+import type { DominoDocument, MechanismConnection } from '@/shared/document'
+import { availableTargets, connectionBranchSide } from '../lib/connections'
 
 const props = defineProps<{
   document: DominoDocument; fromId: string; toId: string; message: string
@@ -11,6 +11,7 @@ const emit = defineEmits<{
   remove: [string]; toggle: [string, boolean]
 }>()
 const sourceTargets = (from: string) => availableTargets(props.document, from)
+const branchSide = (link: MechanismConnection) => connectionBranchSide(props.document, link)
 </script>
 
 <template>
@@ -22,6 +23,7 @@ const sourceTargets = (from: string) => availableTargets(props.document, from)
         <button class="connection-toggle" :class="{ active: link.enabled }" :aria-label="link.enabled ? '停用连线' : '启用连线'"
           :aria-pressed="link.enabled" @click="emit('toggle', link.id, !link.enabled)"><span></span></button>
         <span class="connection-names">{{ document.pieces.find(piece => piece.id === link.from)?.label }} <i>→</i> {{ document.pieces.find(piece => piece.id === link.to)?.label }}</span>
+        <span v-if="branchSide(link)" class="connection-side" :data-side="branchSide(link)">{{ branchSide(link) === 'left' ? '左支路' : '右支路' }}</span>
         <button class="remove-link" :aria-label="'删除连线 ' + link.id" @click="emit('remove', link.id)"><X :size="14" /></button>
       </div>
     </div>
